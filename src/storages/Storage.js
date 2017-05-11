@@ -1,5 +1,3 @@
-import Bluebird from 'bluebird';
-
 /**
  * @class Storage
  */
@@ -11,7 +9,7 @@ export default class Storage {
    * @returns {Promise}
    */
   logMigration(migrationName) {
-    return Bluebird.resolve();
+    return Promise.resolve();
   }
 
   /**
@@ -21,7 +19,7 @@ export default class Storage {
    * @returns {Promise}
    */
   unlogMigration(migrationName) {
-    return Bluebird.resolve();
+    return Promise.resolve();
   }
 
   /**
@@ -30,6 +28,6 @@ export default class Storage {
    * @returns {Promise.<String[]>}
    */
   executed() {
-    return Bluebird.resolve([]);
+    return Promise.resolve([]);
   }
 }

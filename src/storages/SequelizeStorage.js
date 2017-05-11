@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import Storage from './Storage';
 
 /**
@@ -66,6 +65,10 @@ export default class SequelizeStorage extends Storage {
     this.model = model || this.getModel();
   }
 
+  /**
+   * Get model or create it.
+   * @private
+   */
   getModel() {
     if (this.sequelize.isDefined(this.modelName)) {
       return this.sequelize.model(this.modelName);
@@ -98,17 +101,11 @@ export default class SequelizeStorage extends Storage {
    * @param {String} migrationName - Name of the migration to be logged.
    * @returns {Promise}
    */
-  logMigration(migrationName) {
-    var self = this;
-
-    return this._model()
-      .sync()
-      .then(function(Model) {
-        var migration = {};
-        migration[self.columnName] = migrationName;
-        return Model.create(migration);
-      });
-  }
+   async logMigration(migrationName) {
+     await this.model.sync();
+     const migration = { [this.columnName]: migrationName };
+     return await this.model.create(migration);
+   }
 
   /**
    * Unlogs migration to be considered as pending.
@@ -116,53 +113,27 @@ export default class SequelizeStorage extends Storage {
    * @param {String} migrationName - Name of the migration to be unlogged.
    * @returns {Promise}
    */
-  unlogMigration(migrationName) {
-    var self             = this;
-    var sequelize        = this.sequelize;
-    var sequelizeVersion = !!sequelize.modelManager ? 2 : 1;
+   async unlogMigration(migrationName) {
+     await this.model.sync();
+     let where = { [this.columnName]: migrationName };
 
-    return this._model()
-      .sync()
-      .then(function(Model) {
-        var where = {};
-        where[self.columnName] = migrationName;
+     // This is an ugly hack to find out which function signature we have to use.
+     const sequelizeVersion = this.sequelize.modelManager ? 2 : 1;
+     if (sequelizeVersion > 1) {
+       where = { where: where };
+     }
 
-        if (sequelizeVersion > 1) {
-          // This is an ugly hack to find out which function signature we have to use.
-          where = { where: where };
-        }
-
-        return Model.destroy(where);
-      });
-  }
+     return await this.model.destroy(where);
+   }
 
   /**
    * Gets list of executed migrations.
    *
    * @returns {Promise.<String[]>}
    */
-  executed() {
-    var self = this;
-
-    return this._model()
-      .sync()
-      .then(function(Model) {
-        return Model.findAll({ order: [ [ self.columnName, 'ASC' ] ] });
-      })
-      .then(function(migrations) {
-        return migrations.map(function(migration) {
-          return migration[self.columnName];
-        });
-      });
-  }
-
-  /**
-   * Gets Sequelize model used as a storage.
-   *
-   * @returns {Sequelize.Model}
-   * @private
-   */
-  _model() {
-    return this.model;
-  }
+   async executed() {
+     await this.model.sync();
+     const migrations = await this.model.findAll({ order: [[this.columnName, 'ASC']] });
+     return migrations.map((migration) => migration[this.columnName]);
+   }
 }
